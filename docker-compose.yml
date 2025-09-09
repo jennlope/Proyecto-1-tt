@@ -1,0 +1,74 @@
+name: proyecto1
+
+services:
+  namenode:
+    build: ./namenode
+    container_name: namenode
+    environment:
+      BLOCK_SIZE: "67108864"
+      USERS: "alice:alicepwd,bob:bobpwd"
+    ports:
+      - "8000:8000"
+    volumes:
+      - nn_data:/app/data
+
+  datanode1:
+    build: ./datanode
+    container_name: datanode1
+    environment:
+      NODE_ID: dn1
+      NAMENODE_URL: http://namenode:8000
+      BASE_URL: http://localhost:8001
+    ports:
+      - "8001:8001"
+    volumes:
+      - dn1_data:/app/blocks
+    depends_on:
+      - namenode
+
+  datanode2:
+    build: ./datanode
+    container_name: datanode2
+    environment:
+      NODE_ID: dn2
+      NAMENODE_URL: http://namenode:8000
+      BASE_URL: http://localhost:8002
+    ports:
+      - "8002:8001"
+    volumes:
+      - dn2_data:/app/blocks
+    depends_on:
+      - namenode
+
+  datanode3:
+    build: ./datanode
+    container_name: datanode3
+    environment:
+      NODE_ID: dn3
+      NAMENODE_URL: http://namenode:8000
+      BASE_URL: http://localhost:8003
+    ports:
+      - "8003:8001"
+    volumes:
+      - dn3_data:/app/blocks
+    depends_on:
+      - namenode
+  
+  dashboard:
+    build: ./dashboard
+    container_name: dashboard
+    environment:
+      NAMENODE_URL: http://namenode:8000
+      DFS_USER: alice
+      DFS_PASS: alicepwd
+    ports:
+      - "8080:8080"
+    depends_on:
+      - namenode
+
+
+volumes:
+  nn_data:
+  dn1_data:
+  dn2_data:
+  dn3_data:

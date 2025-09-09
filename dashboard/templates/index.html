@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GridDFS Dashboard</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f6f6f6; }
+    a.btn { display:inline-block; padding:6px 10px; border:1px solid #0b62c4; color:#0b62c4; border-radius:8px; text-decoration:none; }
+    a.btn:hover { background:#eaf2fc; }
+  </style>
+</head>
+<body>
+  <h1>GridDFS Dashboard</h1>
+  <h2>Archivos</h2>
+  {% if files %}
+  <table>
+    <tr><th>Nombre</th><th>Tamaño (bytes)</th><th>Acciones</th></tr>
+    {% for f in files %}
+      <tr>
+        <td>{{ f.filename or f.name }}</td>
+        <td>{{ f.size }}</td>
+        <td><a class="btn" href="/file/{{ f.filename or f.name }}">Ver</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+    <p>No hay archivos (usa el CLI para subir alguno).</p>
+  {% endif %}
+</body>
+</html>
