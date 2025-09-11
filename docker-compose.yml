@@ -56,13 +56,14 @@ services:
   
   dashboard:
     build: ./dashboard
-    container_name: dashboard
     environment:
       NAMENODE_URL: http://namenode:8000
       DFS_USER: alice
       DFS_PASS: alicepwd
     ports:
       - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # <-- clave en Linux/WSL
     depends_on:
       - namenode
 
