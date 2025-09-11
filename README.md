@@ -169,7 +169,7 @@ Sistema distribuido simple tipo DFS (estilo HDFS) con:
 
 ---
 
-## 🧱 Arquitectura (resumen)
+## Arquitectura (resumen)
 
 - El **cliente** sube un archivo → el **NameNode** lo parte en bloques → asigna cada bloque a un **DataNode** → el cliente envía cada bloque al nodo correspondiente.
 - Al descargar, el cliente (o el dashboard) pide los bloques en orden y reconstruye el archivo.
@@ -177,7 +177,7 @@ Sistema distribuido simple tipo DFS (estilo HDFS) con:
 
 ---
 
-## 📦 Requisitos previos
+## Requisitos previos
 
 - **Docker** y **Docker Compose**
 - **Python 3.11+**
@@ -185,7 +185,7 @@ Sistema distribuido simple tipo DFS (estilo HDFS) con:
 
 ---
 
-## 🗂️ Estructura del proyecto (esperada)
+## Estructura del proyecto (esperada)
 
 ```
 Proyecto 1/
@@ -215,7 +215,7 @@ Proyecto 1/
 
 ---
 
-## 🔧 1) Crear entorno virtual
+## 1) Crear entorno virtual
 
 ```bash
 # dentro de la carpeta del proyecto
@@ -230,7 +230,7 @@ pip install -r namenode/requirements.txt             -r datanode/requirements.tx
 
 ---
 
-## 🐳 2) Ejecutar con Docker Compose
+## 2) Ejecutar con Docker Compose
 
 ### Variables y puertos
 - NameNode: `8000`
@@ -330,11 +330,11 @@ curl -s http://localhost:8000/datanodes
 ```
 
 **Dashboard:**  
-👉 http://localhost:8080
+ http://localhost:8080
 
 ---
 
-## 💻 3) Uso del cliente (CLI)
+## 3) Uso del cliente (CLI)
 
 Autenticación: `--user alice --password alicepwd --namenode http://localhost:8000`
 
@@ -360,7 +360,7 @@ python3 client/cli.py --user alice --password alicepwd --namenode http://localho
 
 ---
 
-## 🧪 4) Demo de sharding (visual)
+## 4) Demo de sharding (visual)
 
 ### Crear archivo de prueba
 ```bash
@@ -387,8 +387,8 @@ commit ok
 - Abre `http://localhost:8080` → demo.txt
 - Bloques listados con nodo asignado
 - Botones:
-  - “⬇️ Bloque i” → descarga fragmento
-  - “⬇️ Descargar reconstruido” → baja los 300 bytes unidos
+  - “ Bloque i” → descarga fragmento
+  - “ Descargar reconstruido” → baja los 300 bytes unidos
 
 ### Verificar por terminal
 ```bash
@@ -400,7 +400,7 @@ curl -s http://localhost:8080/file/demo.txt/download | wc -c   # 300
 
 ---
 
-## 🩺 5) Endpoints útiles
+## 5) Endpoints útiles
 
 **NameNode**
 - `GET /datanodes` → nodos registrados
@@ -421,7 +421,7 @@ curl -s http://localhost:8080/file/demo.txt/download | wc -c   # 300
 
 ---
 
-## 🛠️ 6) Solución de problemas
+## 6) Solución de problemas
 
 - **Connection refused en DataNodes**: revisa `docker compose ps` y logs (`docker compose logs datanode1`).
 - **Error `python-multipart`**: asegúrate de que está en `requirements.txt` del datanode.
@@ -429,7 +429,7 @@ curl -s http://localhost:8080/file/demo.txt/download | wc -c   # 300
 
 ---
 
-## 🧾 7) Dependencias
+## 7) Dependencias
 
 ### `namenode/requirements.txt`
 ```
@@ -459,7 +459,7 @@ jinja2
 
 ---
 
-## 🧹 8) .gitignore recomendado
+## 8) .gitignore recomendado
 
 ```
 __pycache__/
@@ -486,7 +486,7 @@ __pycache__/
 
 ---
 
-## ✅ 9) Flujo típico
+## 9) Flujo típico
 
 1. `docker compose up --build -d`  
 2. Ver nodos → `curl http://localhost:8000/datanodes`  
