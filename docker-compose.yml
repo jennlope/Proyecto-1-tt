@@ -5,7 +5,7 @@ services:
     build: ./namenode
     container_name: namenode
     environment:
-      BLOCK_SIZE: "67108864"
+      BLOCK_SIZE: "51200"
       USERS: "alice:alicepwd,bob:bobpwd"
     ports:
       - "8000:8000"

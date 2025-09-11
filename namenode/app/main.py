@@ -7,7 +7,7 @@ from models import FileMetadata, BlockLocation, AllocateRequest, RegisterDN
 api = FastAPI(title="GridDFS NameNode")
 
 USERS = dict(u.split(":") for u in os.getenv("USERS","alice:alicepwd").split(","))
-BLOCK_SIZE = int(os.getenv("BLOCK_SIZE", 64*1024*1024))
+BLOCK_SIZE = int(os.getenv("BLOCK_SIZE", 50*1024))
 
 security = HTTPBasic()
 

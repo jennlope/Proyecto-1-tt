@@ -1,0 +1,40 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# entornos virtuales
+.venv/
+venv/
+env/
+.env
+*.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# datos locales
+*.sqlite3
+*.db
+
+# Docker
+*.pid
+.dockerignore
+
+# archivos temporales del sistema
+.DS_Store
+Thumbs.db
+
+# archivos de prueba generados
+*_recuperada.*
+*_descargada.*
+demo_recuperada.txt
+Prueba_recuperada.pdf
+
+# archivos binarios grandes (opcional)
+*.pdf
+*.bin

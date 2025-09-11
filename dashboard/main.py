@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, StreamingResponse
-import requests, os
+import requests, os, mimetypes
 
 NAMENODE = os.getenv("NAMENODE_URL", "http://localhost:8000")
 USER = os.getenv("DFS_USER", "alice")
@@ -71,7 +71,9 @@ def download_block(filename: str, index: int):
     download_name = f"{stem}.block{index}{ext or ''}"
 
     def stream():
-        with requests.get(url, stream=True, timeout=10) as r:
+        # Convertir localhost a host.docker.internal para acceso desde contenedor
+        datanode_url = dn.replace("http://localhost:", "http://host.docker.internal:")
+        with requests.get(f"{datanode_url}/read/{block_id}", stream=True, timeout=10) as r:
             r.raise_for_status()
             for chunk in r.iter_content(64 * 1024):
                 if chunk:
@@ -103,8 +105,9 @@ def download_reconstructed(filename: str):
             dn = b.get("datanode")
             if not block_id or not dn:
                 raise HTTPException(500, "invalid meta for block")
-            url = f"{dn}/read/{block_id}"
-            with requests.get(url, stream=True, timeout=10) as r:
+            # Convertir localhost a host.docker.internal para acceso desde contenedor
+            datanode_url = dn.replace("http://localhost:", "http://host.docker.internal:")
+            with requests.get(f"{datanode_url}/read/{block_id}", stream=True, timeout=10) as r:
                 r.raise_for_status()
                 for chunk in r.iter_content(64 * 1024):
                     if chunk:

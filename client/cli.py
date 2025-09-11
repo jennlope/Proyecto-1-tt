@@ -67,7 +67,7 @@ def main():
 
     s_put = sub.add_parser("put")
     s_put.add_argument("path")
-    s_put.add_argument("--block-size", default=os.getenv("BLOCK_SIZE", 64*1024*1024))
+    s_put.add_argument("--block-size", default=os.getenv("BLOCK_SIZE", 50*1024))
     s_put.set_defaults(func=cmd_put)
 
     s_get = sub.add_parser("get")
