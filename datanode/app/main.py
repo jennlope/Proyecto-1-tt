@@ -2,24 +2,18 @@ import os, io, requests, time, asyncio
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 
-# -------------------------------
-# Variables de entorno
-# -------------------------------
+# Var de entorno
 NODE_ID = os.getenv("NODE_ID", "dnX")
 NAMENODE = os.getenv("NAMENODE_URL", "http://namenode:8000")
 BASE_URL = os.getenv("BASE_URL", f"http://{NODE_ID}:8001")
 HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", "5"))  # seg entre latidos
 
-# -------------------------------
-# Inicialización del DataNode
-# -------------------------------
+# Arrancar DN
 api = FastAPI(title=f"GridDFS DataNode {NODE_ID}")
 BASE_DIR = "/app/blocks"
 os.makedirs(BASE_DIR, exist_ok=True)
 
-# -------------------------------
-# Registro inicial en NameNode
-# -------------------------------
+# Registrar el DN y heartbeats
 @api.on_event("startup")
 async def startup_event():
     # Intento de registro inicial
@@ -37,12 +31,10 @@ async def startup_event():
             print(f"[REGISTER-ERR] intento {i+1}: {e}")
         time.sleep(2)
 
-    # Arranca loop de heartbeats
+    # heartbeats
     asyncio.create_task(heartbeat_loop())
 
-# -------------------------------
-# Heartbeat periódico
-# -------------------------------
+# Función de heartbeat
 async def heartbeat_loop():
     while True:
         try:
@@ -56,9 +48,7 @@ async def heartbeat_loop():
             print(f"[HEARTBEAT-ERR] {e}")
         await asyncio.sleep(HEARTBEAT_INTERVAL)
 
-# -------------------------------
 # Endpoints de servicio
-# -------------------------------
 @api.get("/health")
 def health():
     return {"node": NODE_ID, "ok": True}

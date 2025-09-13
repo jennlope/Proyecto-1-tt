@@ -12,7 +12,7 @@ app = FastAPI(title="GridDFS Dashboard")
 templates = Jinja2Templates(directory="templates")
 
 def to_host_docker_internal(url: str) -> str:
-    # Para que el contenedor dashboard acceda a los DN que se registran como http://localhost:8xxx
+    # El contenedor dashboard accede a los DN que se registran como http://localhost:8xxx
     return url.replace("http://localhost", "http://host.docker.internal")
 
 def ls_files():
@@ -160,7 +160,8 @@ def download_reconstructed(filename: str, best_effort: int = Query(0)):
                     raise HTTPException(502, f"error reading {block_id} from {dn}")
                 # en best_effort: saltar bloque
 
-    # si hay faltantes, enviaremos alerta al terminar de construir la respuesta
+    # si hay faltantes, se manda alerta al terminar de construir la respuesta 
+    # Andrea hace esto-
     def iterator():
         for chunk in stream_all():
             yield chunk

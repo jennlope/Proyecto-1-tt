@@ -7,25 +7,19 @@ from models import FileMetadata, BlockLocation, AllocateRequest, RegisterDN
 
 api = FastAPI(title="GridDFS NameNode")
 
-# -------------------------
 # Config
-# -------------------------
 USERS = dict(u.split(":") for u in os.getenv("USERS", "alice:alicepwd").split(","))
 BLOCK_SIZE = int(os.getenv("BLOCK_SIZE", 50 * 1024))
 DOWN_THRESHOLD = int(os.getenv("DOWN_THRESHOLD", "15"))  # seg sin heartbeat => DOWN
 
 security = HTTPBasic()
 
-# -------------------------
-# Estado de DataNodes
-# DATANODES: node_id -> {"base_url": str, "last_seen": int}
-# -------------------------
+# Estado de DN
+# DN: node_id -> {"base_url": str, "last_seen": int}
 DATANODES: Dict[str, Dict[str, Any]] = {}
 RR_STATE = 0  # round-robin
 
-# -------------------------
 # DB init
-# -------------------------
 async def init_db():
     async with aiosqlite.connect("/app/data/storage.db") as db:
         await db.execute(
@@ -69,26 +63,20 @@ def post_alert(alert: AlertReq):
 def list_alerts():
     """Lista las alertas acumuladas en memoria."""
     return [a.dict() for a in ALERTS]
-# -------------------------
 # Auth
-# -------------------------
 def auth(credentials: HTTPBasicCredentials = Depends(security)):
     user = credentials.username
     if USERS.get(user) != credentials.password:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return user
 
-# -------------------------
-# Modelos para heartbeat/alertas (locales a este archivo)
-# -------------------------
+# Mod de heartbeat/alertas (locales a este archivo)
 class HeartbeatReq(BaseModel):
     node_id: str
     base_url: str
     ts: int
 
-# -------------------------
-# Datanodes: registro + heartbeat + listado con estado
-# -------------------------
+# DN: registro + heartbeat + listado con estado
 @api.post("/register", tags=["datanodes"])
 def register_dn(req: RegisterDN):
     """Registro inicial de un DataNode."""
@@ -131,9 +119,7 @@ def _up_base_urls() -> List[str]:
         if (now - info.get("last_seen", 0)) < DOWN_THRESHOLD
     ]
 
-# -------------------------
 # Asignación de bloques (preferir nodos UP)
-# -------------------------
 def pick_nodes(n_blocks: int) -> List[str]:
     global RR_STATE
     nodes_up = _up_base_urls()
@@ -142,16 +128,14 @@ def pick_nodes(n_blocks: int) -> List[str]:
         raise HTTPException(503, "No DataNodes registered")
 
     # Si no hay UP pero sí registrados, permitimos continuar (degradado),
-    # pero idealmente el cliente fallará al subir; lo dejamos a decisión.
+    # pero demas q el cliente falla al subir, lo dejamos.
     result = []
     for i in range(n_blocks):
         result.append(nodes[(RR_STATE + i) % len(nodes)])
     RR_STATE = (RR_STATE + n_blocks) % len(nodes)
     return result
 
-# -------------------------
 # Endpoints de archivos
-# -------------------------
 @api.post("/allocate", response_model=FileMetadata, tags=["files"])
 async def allocate(req: AllocateRequest, user: str = Depends(auth)):
     if user != req.owner:
@@ -193,7 +177,7 @@ async def get_meta(owner: str, filename: str, user: str = Depends(auth)):
         raise HTTPException(404, "Not found")
     # Nota: devolvemos FileMetadata tal cual (sin node_status extra)
     # para no romper el response_model. El dashboard puede consultar /datanodes
-    # para pintar el estado o puedes crear /meta_ext si quieres enriquecer.
+    # para pintar el estado o puedes crear /meta_ext enriquecer.
     return FileMetadata.model_validate_json(row[0])
 
 @api.get("/ls", tags=["files"])

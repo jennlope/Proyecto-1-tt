@@ -68,8 +68,8 @@ flowchart TD
 ### 1. Crear entorno virtual (opcional, para desarrollo local)
 
 ```powershell
-python -m venv venv
-venv\Scripts\activate
+python3 -m venv venv
+source venv/bin/activate
 ```
 
 ### 2. Instalar dependencias (desarrollo local)
@@ -98,7 +98,7 @@ Esto levantará los servicios:
 
 Subir un archivo:
 ```powershell
-python client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 put demo.txt
+python client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 put demo.txt --block-size 100
 ```
 Listar archivos:
 ```powershell
@@ -132,22 +132,6 @@ Podrás visualizar archivos, detalles y descargar bloques o archivos completos.
 - `BASE_URL`: URL base de cada DataNode
 - `DFS_USER` y `DFS_PASS`: Usuario y contraseña para el Dashboard
 
----
-
-## Dependencias principales
-
-- Python >= 3.11
-- fastapi
-- uvicorn
-- requests
-- aiosqlite
-- pydantic[dotenv]
-- python-multipart
-- jinja2
-- Docker
-- Docker Compose
-
----
 
 ## Notas
 - Los archivos se dividen en bloques y se distribuyen entre los DataNodes.
