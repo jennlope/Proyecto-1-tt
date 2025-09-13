@@ -19,6 +19,7 @@ services:
       NODE_ID: dn1
       NAMENODE_URL: http://namenode:8000
       BASE_URL: http://localhost:8001
+      HEARTBEAT_INTERVAL: 5
     ports:
       - "8001:8001"
     volumes:
@@ -33,6 +34,7 @@ services:
       NODE_ID: dn2
       NAMENODE_URL: http://namenode:8000
       BASE_URL: http://localhost:8002
+      HEARTBEAT_INTERVAL: 5
     ports:
       - "8002:8001"
     volumes:
@@ -47,6 +49,7 @@ services:
       NODE_ID: dn3
       NAMENODE_URL: http://namenode:8000
       BASE_URL: http://localhost:8003
+      HEARTBEAT_INTERVAL: 5
     ports:
       - "8003:8001"
     volumes:
