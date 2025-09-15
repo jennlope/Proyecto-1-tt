@@ -38,3 +38,5 @@ Prueba_recuperada.pdf
 # archivos binarios grandes (opcional)
 *.pdf
 *.bin
+
+namenode/data/

@@ -11,15 +11,20 @@ PASS = os.getenv("DFS_PASS", "alicepwd")
 app = FastAPI(title="GridDFS Dashboard")
 templates = Jinja2Templates(directory="templates")
 
-def to_host_docker_internal(url: str) -> str:
-    # Para que el contenedor dashboard acceda a los DN que se registran como http://localhost:8xxx
-    return url.replace("http://localhost", "http://host.docker.internal")
-
-def ls_files():
+def all_directories():
     try:
-        r = requests.get(f"{NAMENODE}/ls", auth=(USER, PASS), timeout=5)
+        r = requests.get(f"{NAMENODE}/directories", auth = (USER, PASS), timeout = 5)
         r.raise_for_status()
         return r.json()
+    except Exception:
+        return []
+
+def ls_files(directory_id: int = 1):
+    try:
+        r = requests.get(f"{NAMENODE}/ls/{directory_id}", auth = (USER, PASS), timeout = 5)
+        r.raise_for_status()
+        data = r.json()
+        return data.get("files", [])
     except Exception:
         return []
 
@@ -63,10 +68,21 @@ def post_alert(filename: str, missing_blocks: List[str], missing_dns: List[str])
     except Exception:
         pass
 
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    files = ls_files()
-    return templates.TemplateResponse("index.html", {"request": request, "files": files})
+@app.get("/", response_class = HTMLResponse)
+def home(request: Request, directory_id: int = 1):
+    files = ls_files(directory_id)
+    directories = all_directories()
+
+    print("############")
+    print(files)
+    print(directories)
+
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "directories": directories,
+        "files": files,
+        "current_directory": directory_id
+    })
 
 @app.get("/file/{filename}", response_class=HTMLResponse)
 def file_detail(request: Request, filename: str):
@@ -96,12 +112,12 @@ def download_block(filename: str, index: int):
     dn = b.get("datanode")
     if not block_id or not dn:
         raise HTTPException(500, "invalid meta for block")
-
+    url = f"{dn}/read/{block_id}"
     stem, ext = os.path.splitext(filename)
     download_name = f"{stem}.block{index}{ext or ''}"
 
     def stream():
-        dn_url = to_host_docker_internal(dn)
+        datanode_url = dn.replace("http://localhost:", "http://host.docker.internal:")
         with requests.get(f"{dn_url}/read/{block_id}", stream=True, timeout=10) as r:
             r.raise_for_status()
             for chunk in r.iter_content(64 * 1024):
