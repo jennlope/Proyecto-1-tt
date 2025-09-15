@@ -10,11 +10,20 @@ PASS = os.getenv("DFS_PASS", "alicepwd")
 app = FastAPI(title="GridDFS Dashboard")
 templates = Jinja2Templates(directory="templates")
 
-def ls_files():
+def all_directories():
     try:
-        r = requests.get(f"{NAMENODE}/ls", auth=(USER, PASS), timeout=5)
+        r = requests.get(f"{NAMENODE}/directories", auth = (USER, PASS), timeout = 5)
         r.raise_for_status()
         return r.json()
+    except Exception:
+        return []
+
+def ls_files(directory_id: int = 1):
+    try:
+        r = requests.get(f"{NAMENODE}/ls/{directory_id}", auth = (USER, PASS), timeout = 5)
+        r.raise_for_status()
+        data = r.json()
+        return data.get("files", [])
     except Exception:
         return []
 
@@ -30,10 +39,21 @@ def get_datanodes():
         return {}
     return r.json()
 
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    files = ls_files()
-    return templates.TemplateResponse("index.html", {"request": request, "files": files})
+@app.get("/", response_class = HTMLResponse)
+def home(request: Request, directory_id: int = 1):
+    files = ls_files(directory_id)
+    directories = all_directories()
+
+    print("############")
+    print(files)
+    print(directories)
+
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "directories": directories,
+        "files": files,
+        "current_directory": directory_id
+    })
 
 @app.get("/file/{filename}", response_class=HTMLResponse)
 def file_detail(request: Request, filename: str):
