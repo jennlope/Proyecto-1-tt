@@ -1,6 +1,17 @@
-# GridDFS – Proyecto de Sistema de Archivos Distribuido
+# GridDFS – Sistema de Archivos Distribuido
 
-Este proyecto implementa un sistema de archivos distribuido tipo GridDFS, inspirado en HDFS, usando Python, FastAPI y Docker. Permite almacenar, recuperar y eliminar archivos de manera distribuida entre varios nodos.
+Este proyecto implementa un sistema de archivos distribuido tipo GridDFS, inspirado en HDFS, usando Python, FastAPI y Docker. Permite almacenar, recuperar y eliminar archivos de manera distribuida entre varios nodos, con soporte completo para directorios y subdirectorios.
+
+---
+
+## Características principales
+
+- **Sistema de archivos jerárquico**: Soporte completo para carpetas y subcarpetas
+- **Distribución de bloques**: Los archivos se dividen en bloques y se distribuyen entre DataNodes
+- **Gestión de metadatos**: NameNode centralizado para metadatos y asignación de bloques
+- **Cliente CLI**: Interfaz de línea de comandos completa para todas las operaciones
+- **Dashboard web**: Interfaz gráfica para visualizar y descargar archivos
+- **Persistencia**: Los datos se mantienen entre reinicios de contenedores
 
 ---
 
@@ -20,7 +31,7 @@ flowchart TD
     DN3[DataNode 3]
   end
 
-  CLI -- "put/get/rm/ls" --> NN
+  CLI -- "put/get/rm/ls/mkdir" --> NN
   NN -- "Asignación de bloques / Metadatos" --> CLI
   CLI -- "Envía/Recupera/Elimina bloques" --> DN1
   CLI -- "Envía/Recupera/Elimina bloques" --> DN2
@@ -46,6 +57,8 @@ flowchart TD
 ├── dashboard/
 │   ├── main.py          # Dashboard web
 │   └── templates/       # Plantillas HTML
+│       ├── index.html
+│       └── file.html
 ├── datanode/
 │   ├── Dockerfile
 │   └── app/
@@ -54,111 +67,303 @@ flowchart TD
 │   ├── Dockerfile
 │   └── app/
 │       ├── main.py      # API de NameNode
-│       ├── models.py    # Modelos de datos
-│       └── storage.py   # (opcional)
+│       └── models.py    # Modelos de datos
 ├── docker-compose.yml   # Orquestación de servicios
 ├── demo.txt             # Archivo de ejemplo
-└── ...                  # Otros archivos y volúmenes
+└── requirements.txt     # Dependencias
 ```
 
 ---
 
-## Instalación y ejecución
+## Instalación y configuración
 
-### 1. Crear entorno virtual (opcional, para desarrollo local)
+### Requisitos previos
 
-```powershell
-python -m venv venv
-venv\Scripts\activate
+- **Docker** y **Docker Compose**
+- **Python 3.11+**
+- **Sistema operativo**: Linux (Ubuntu, Debian, etc.)
+
+### 1. Clonar y preparar el proyecto
+
+```bash
+cd ~/
+git clone <tu-repositorio>
+cd Proyecto-1-tt
+
+# Crear entorno virtual (opcional, para desarrollo local)
+python3 -m venv venv
+source venv/bin/activate
+
+# Instalar dependencias para el cliente
+pip install requests
 ```
 
-### 2. Instalar dependencias (desarrollo local)
+### 2. Ejecutar con Docker Compose
 
-```powershell
-pip install -r dependencias.txt
+```bash
+# Levantar todos los servicios
+docker compose up --build -d
+
+# Verificar que todos los contenedores están corriendo
+docker compose ps
+
+# Ver logs si hay problemas
+docker compose logs namenode
 ```
 
-### 3. Ejecución con Docker
-
-Obviamente hay que tener Docker y Docker Compose instalados.
-
-```powershell
-docker-compose up --build
-#Para eliminarlo
-docker-compose down
-```
-Esto levantará los servicios:
+**Servicios levantados:**
 - NameNode (puerto 8000)
-- DataNode1 (puerto 8001)
+- DataNode1 (puerto 8001) 
 - DataNode2 (puerto 8002)
 - DataNode3 (puerto 8003)
 - Dashboard (puerto 8080)
 
-### 4. Uso básico del CLI
+### 3. Verificar instalación
 
-Subir un archivo:
-```powershell
-python client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 put demo.txt
-```
-Listar archivos:
-```powershell
-python client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 ls
-```
-Descargar archivo:
-```powershell
-python client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 get demo.txt
-```
-Eliminar archivo:
-```powershell
-python client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 rm demo.txt
-```
+```bash
+# Verificar nodos registrados
+curl -s http://localhost:8000/datanodes
 
-### 5. Acceso al Dashboard Web
-
-Abre tu navegador en:
+# Debería devolver algo como:
+# {"dn1":{"base_url":"http://localhost:8001","last_seen":1234567890,"status":"UP"}}
 ```
-http://localhost:8080
-```
-Podrás visualizar archivos, detalles y descargar bloques o archivos completos.
 
 ---
 
-## Variables de entorno relevantes
+## Uso del cliente CLI
 
-- `BLOCK_SIZE`: Tamaño de bloque en bytes (por defecto 64MB)
-- `USERS`: Usuarios permitidos (ejemplo: "alice:alicepwd,bob:bobpwd")
-- `NAMENODE_URL`: URL del NameNode para los DataNodes y Dashboard
-- `NODE_ID`: Identificador de cada DataNode
-- `BASE_URL`: URL base de cada DataNode
-- `DFS_USER` y `DFS_PASS`: Usuario y contraseña para el Dashboard
+### Sintaxis básica
+
+```bash
+python3 client/cli.py --user <usuario> --password <contraseña> --namenode http://localhost:8000 <comando>
+```
+
+**Usuarios por defecto:**
+- Usuario: `alice`, Contraseña: `alicepwd`
+- Usuario: `bob`, Contraseña: `bobpwd`
+
+### Comandos disponibles
+
+#### 1. Listar contenido de directorios
+
+```bash
+# Listar directorio raíz
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 ls
+
+# Listar directorio específico por ID
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 ls --dir 2
+```
+
+**Salida ejemplo:**
+```
+📂 Carpetas:
+  [2] documentos/
+  [3] imagenes/
+
+📄 Archivos:
+  [1] readme.txt (1024 bytes)
+```
+
+#### 2. Crear directorios
+
+```bash
+# Crear carpeta en directorio raíz (ID=1)
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 mkdir 1 documentos
+
+# Crear subcarpeta dentro de "documentos" (supongamos ID=2)
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 mkdir 2 proyectos
+
+# Crear carpeta anidada
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 mkdir 3 2024
+```
+
+#### 3. Subir archivos
+
+```bash
+# Subir archivo al directorio raíz
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 put demo.txt
+
+# Subir archivo a carpeta específica
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 put documento.pdf --dir 2
+
+# Subir con tamaño de bloque personalizado
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 put archivo_grande.zip --block-size 32768 --dir 2
+```
+
+#### 4. Descargar archivos
+
+```bash
+# Descargar por ID de archivo
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 get 1
+
+# Descargar con nombre personalizado
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 get 1 --output mi_archivo.txt
+```
+
+#### 5. Eliminar archivos y directorios
+
+```bash
+# Eliminar archivo por ID
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 rm 1
+
+# Eliminar directorio vacío
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 rmdir 3
+```
+
+### Ejemplo de flujo completo
+
+```bash
+# 1. Listar contenido inicial (vacío)
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 ls
+
+# 2. Crear estructura de directorios
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 mkdir 1 documentos
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 mkdir 1 imagenes
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 mkdir 2 proyectos
+
+# 3. Subir archivos
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 put demo.txt --dir 2
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 put imagen.jpg --dir 3
+
+# 4. Verificar estructura
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 ls
+python3 client/cli.py --user alice --password alicepwd --namenode http://localhost:8000 ls --dir 2
+```
 
 ---
 
-## Dependencias principales
+## Dashboard web
 
-- Python >= 3.11
-- fastapi
-- uvicorn
-- requests
-- aiosqlite
-- pydantic[dotenv]
-- python-multipart
-- jinja2
-- Docker
-- Docker Compose
+### Acceso
+
+Abre tu navegador en: **http://localhost:8080**
+
+### Funcionalidades
+
+- **Vista de archivos**: Lista todos los archivos del sistema
+- **Detalles de bloques**: Muestra cómo se distribuyen los bloques entre DataNodes
+- **Descarga individual**: Descarga bloques específicos
+- **Descarga completa**: Reconstruye y descarga archivos completos
 
 ---
 
-## Notas
-- Los archivos se dividen en bloques y se distribuyen entre los DataNodes.
-- El NameNode gestiona los metadatos y la asignación de bloques.
-- El Dashboard permite visualizar y descargar archivos y bloques.
-- El CLI permite subir, listar, descargar y eliminar archivos.
+## Gestión del sistema
+
+### Reinicio completo y limpieza
+
+Para limpiar completamente el sistema (eliminar todos los datos):
+
+```bash
+# 1. Detener contenedores
+docker compose down
+
+# 2. Limpiar datos del NameNode
+sudo rm -rf namenode/data/*
+
+# 3. Eliminar volúmenes de DataNodes
+docker volume rm proyecto1_dn1_data proyecto1_dn2_data proyecto1_dn3_data
+
+# 4. Reiniciar sistema
+docker compose up -d
+```
+
+### Verificar estado del sistema
+
+```bash
+# Estado de contenedores
+docker compose ps
+
+# Logs de servicios
+docker compose logs namenode
+docker compose logs datanode1
+
+# Estado de DataNodes
+curl -s http://localhost:8000/datanodes
+```
+
+### Variables de entorno
+
+Puedes personalizar el comportamiento editando `docker-compose.yml`:
+
+- `BLOCK_SIZE`: Tamaño de bloque en bytes (por defecto 51200)
+- `USERS`: Usuarios permitidos ("alice:alicepwd,bob:bobpwd")
+- `NAMENODE_URL`: URL del NameNode
+- `NODE_ID`: Identificador único de cada DataNode
+
+---
+
+## Arquitectura técnica
+
+### NameNode (Puerto 8000)
+- **Base de datos**: SQLite para metadatos y estructura de directorios
+- **Endpoints principales**:
+  - `GET /ls/{directory_id}` → Listar contenido de directorio
+  - `POST /mkdir/{parent_id}/{dirname}` → Crear directorio
+  - `POST /allocate` → Asignar bloques para archivo
+  - `GET /meta/{file_id}` → Obtener metadatos de archivo
+
+### DataNodes (Puertos 8001-8003)
+- **Almacenamiento**: Archivos de bloques en sistema de archivos local
+- **Endpoints principales**:
+  - `PUT /store/{block_id}` → Guardar bloque
+  - `GET /read/{block_id}` → Leer bloque
+  - `DELETE /delete/{block_id}` → Eliminar bloque
+
+### Dashboard (Puerto 8080)
+- **Framework**: FastAPI + Jinja2
+- **Funciones**: Visualización y descarga de archivos
+
+---
+
+## Solución de problemas
+
+### Error: "Parent directory not found"
+- **Causa**: El directorio padre no existe o ID incorrecto
+- **Solución**: Usar `ls` para verificar IDs correctos de directorios
+
+### Error: "Connection refused"
+- **Causa**: Contenedores no iniciados correctamente
+- **Solución**: 
+  ```bash
+  docker compose ps
+  docker compose logs <servicio>
+  docker compose restart <servicio>
+  ```
+
+### Error: "Permission denied" al eliminar archivos
+- **Causa**: Permisos de archivos creados por Docker
+- **Solución**: `sudo rm -rf namenode/data/*`
+
+### DataNodes no se registran
+- **Causa**: Problemas de red entre contenedores
+- **Solución**: Verificar `docker-compose.yml` y reiniciar servicios
+
+---
+
+## Dependencias técnicas
+
+### Python
+```
+fastapi
+uvicorn[standard]
+aiosqlite
+pydantic
+requests
+python-multipart
+jinja2
+```
+
+### Contenedores
+- **Base**: Python 3.11
+- **Red**: Red interna de Docker Compose
+- **Volúmenes**: Persistencia de datos entre reinicios
 
 ---
 
 ## Créditos
+
 Proyecto desarrollado para la materia de Telemática.
+Sistema distribuido GridDFS implementado con Docker, FastAPI y Python.
 # Proyecto 1 – Grid DFS (FastAPI + Docker)
 
 Sistema distribuido simple tipo DFS (estilo HDFS) con:

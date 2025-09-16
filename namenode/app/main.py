@@ -1,4 +1,4 @@
-import os, aiosqlite, time
+import os, aiosqlite, time, asyncio
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
@@ -11,6 +11,20 @@ from models import FileMetadata, BlockLocation, AllocateRequest, RegisterDN
 # typing → tipado
 
 api = FastAPI(title="GridDFS NameNode")
+
+@api.on_event("startup")
+async def startup():
+    os.makedirs("/app/data", exist_ok=True)
+    await init_db()
+    print("[STARTUP] Inicialización completa")
+
+#Manada de inservibles sin esto no hacemos nada ->>>>>>>>
+try:
+    os.makedirs("/app/data", exist_ok=True)
+    asyncio.create_task(init_db())
+    print("[MODULE] Inicialización en módulo ejecutada")
+except Exception as e:
+    print(f"[MODULE] Error en inicialización: {e}")
 
 USERS = dict(u.split(":") for u in os.getenv("USERS","alice:alicepwd").split(","))
 BLOCK_SIZE = int(os.getenv("BLOCK_SIZE", 50*1024))
@@ -52,12 +66,19 @@ async def init_db():
             FOREIGN KEY(directory_id) REFERENCES directories(id)
         )
         """)
+        
+        # Crear directorio raíz si no existe
+        async with db.execute("SELECT COUNT(*) FROM directories WHERE id = 1") as cur:
+            count = await cur.fetchone()
+            if count[0] == 0:
+                await db.execute("INSERT INTO directories (id, owner, name, parent_id) VALUES (1, 'root', '/', NULL)")
+                print("[INIT] Directorio raíz creado con id=1")
+            else:
+                print(f"[INIT] Directorio raíz ya existe con count={count[0]}")
+        
         await db.commit()
+        print("[INIT] Inicialización de BD completa")
 
-@api.on_event("startup")
-async def startup():
-    os.makedirs("/app/data", exist_ok=True)
-    await init_db()
 #alertas
 class AlertReq(BaseModel):
     user: str
@@ -210,12 +231,14 @@ async def commit(meta: FileMetadata, user: str = Depends(auth)):
 @api.get("/meta/{file_id}", tags=["files"])
 async def get_meta(file_id: int, user: str = Depends(auth)):
     async with aiosqlite.connect("/app/data/storage.db") as db:
-        async with db.execute(
-            "SELECT metadata FROM files WHERE owner=? AND filename=?",
-            (owner, filename),
-        ) as cur:
-        async with db.execute("SELECT metadata, owner FROM files WHERE id=?", (file_id,)) as cur:
-            row = await cur.fetchone()
+            async with db.execute("SELECT metadata, owner FROM files WHERE id=?", (file_id,)) as cur:
+                row = await cur.fetchone()
+            if not row:
+                raise HTTPException(404, "Not found")
+            metadata, owner = row
+            if owner != user and owner != "root":
+                raise HTTPException(status_code = 403, detail = "Acceso denegado")
+            return FileMetadata.model_validate_json(metadata)
     if not row:
         raise HTTPException(404, "Not found")
     
