@@ -58,6 +58,14 @@ async def init_db():
 async def startup():
     os.makedirs("/app/data", exist_ok=True)
     await init_db()
+
+    # Nuevo
+    async with aiosqlite.connect("/app/data/storage.db") as db:
+        async with db.execute("SELECT id FROM directories WHERE parent_id IS NULL") as root:
+            row = await root.fetchone()
+        if not row:
+            await db.execute("INSERT INTO directories(owner, name, parent_id) VALUES(?,?,?)", ("root", "/", None))
+            await db.commit()
 #alertas
 class AlertReq(BaseModel):
     user: str
