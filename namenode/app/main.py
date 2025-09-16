@@ -209,22 +209,34 @@ async def commit(meta: FileMetadata, user: str = Depends(auth)):
 
 @api.get("/meta/{file_id}", tags=["files"])
 async def get_meta(file_id: int, user: str = Depends(auth)):
+    import json
     async with aiosqlite.connect("/app/data/storage.db") as db:
-        async with db.execute(
-            "SELECT metadata FROM files WHERE owner=? AND filename=?",
-            (owner, filename),
-        ) as cur:
         async with db.execute("SELECT metadata, owner FROM files WHERE id=?", (file_id,)) as cur:
             row = await cur.fetchone()
+
     if not row:
-        raise HTTPException(404, "Not found")
-    
-    metadata, owner = row
+        raise HTTPException(status_code=404, detail="Not found")
+
+    metadata_raw, owner = row
 
     if owner != user and owner != "root":
-        raise HTTPException(status_code = 403, detail = "Acceso denegado")
+        raise HTTPException(status_code=403, detail="Acceso denegado")
 
-    return FileMetadata.model_validate_json(metadata)
+    # Normalizar metadata: si es string JSON, parsear; si ya es dict, usarlo.
+    try:
+        if isinstance(metadata_raw, str):
+            metadata = json.loads(metadata_raw)
+        else:
+            metadata = metadata_raw
+    except Exception:
+        raise HTTPException(status_code=500, detail="Invalid metadata stored")
+
+    # Si por alguna razón la metadata no tiene 'blocks', intenta transformar o fallar claro
+    if "blocks" not in metadata:
+        # opción: devolver un error informativo para que el cliente lo sepa
+        raise HTTPException(status_code=500, detail="Metadata stored is missing 'blocks'")
+
+    return metadata
 
 # Modificado
 @api.get("/ls/{directory_id}", tags=["directories"])
