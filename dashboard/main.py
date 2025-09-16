@@ -28,10 +28,10 @@ def ls_files(directory_id: int = 1):
     except Exception:
         return []
 
-def get_meta(filename: str):
-    r = requests.get(f"{NAMENODE}/meta/{USER}/{filename}", auth=(USER, PASS), timeout=5)
+def get_meta(file_id: int):
+    r = requests.get(f"{NAMENODE}/meta/{file_id}", auth = (USER, PASS), timeout=5)
     if r.status_code != 200:
-        raise HTTPException(r.status_code, f"meta not found for {filename}")
+        raise HTTPException(r.status_code, f"metadata not found for the file with id = {file_id}")
     return r.json()
 
 def get_datanodes():
@@ -84,9 +84,9 @@ def home(request: Request, directory_id: int = 1):
         "current_directory": directory_id
     })
 
-@app.get("/file/{filename}", response_class=HTMLResponse)
-def file_detail(request: Request, filename: str):
-    meta = get_meta(filename)
+@app.get("/file/{file_id}", response_class=HTMLResponse)
+def file_detail(request: Request, file_id: int):
+    meta = get_meta(file_id)
     nodes = get_datanodes()
     blocks = meta.get("blocks", [])
     return templates.TemplateResponse("file.html", {
@@ -97,13 +97,13 @@ def file_detail(request: Request, filename: str):
         "user": USER,
     })
 
-@app.get("/block/{filename}/{index}")
-def download_block(filename: str, index: int):
+@app.get("/block/{file_id}/{index}")
+def download_block(file_id: int, index: int):
     """
     Descarga un bloque específico desde su DataNode.
     Se nombra <nombre>.block<idx><ext> (es un fragmento binario).
     """
-    meta = get_meta(filename)
+    meta = get_meta(file_id)
     blocks = meta.get("blocks", [])
     if index < 0 or index >= len(blocks):
         raise HTTPException(404, "block index out of range")
@@ -113,6 +113,7 @@ def download_block(filename: str, index: int):
     if not block_id or not dn:
         raise HTTPException(500, "invalid meta for block")
     url = f"{dn}/read/{block_id}"
+    filename = meta.get("filename")
     stem, ext = os.path.splitext(filename)
     download_name = f"{stem}.block{index}{ext or ''}"
 
@@ -127,14 +128,16 @@ def download_block(filename: str, index: int):
     headers = {"Content-Disposition": f'attachment; filename="{download_name}"'}
     return StreamingResponse(stream(), media_type="application/octet-stream", headers=headers)
 
-@app.get("/file/{filename}/download")
-def download_reconstructed(filename: str, best_effort: int = Query(0)):
+@app.get("/file/{file_id}/download")
+def download_reconstructed(file_id: int, best_effort: int = Query(0)):
     """
     Descarga reconstruida (une los bloques en orden).
     Si best_effort=1: salta bloques que fallen y continúa con el resto,
     además envía una alerta al NameNode con los bloques/nodos faltantes.
     """
-    meta = get_meta(filename)
+    meta = get_meta(file_id)
+    filename = meta.get("filename")
+    
     blocks = meta.get("blocks", [])
     if not blocks:
         raise HTTPException(404, "no blocks")
