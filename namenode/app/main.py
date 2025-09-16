@@ -210,10 +210,6 @@ async def commit(meta: FileMetadata, user: str = Depends(auth)):
 @api.get("/meta/{file_id}", tags=["files"])
 async def get_meta(file_id: int, user: str = Depends(auth)):
     async with aiosqlite.connect("/app/data/storage.db") as db:
-        async with db.execute(
-            "SELECT metadata FROM files WHERE owner=? AND filename=?",
-            (owner, filename),
-        ) as cur:
         async with db.execute("SELECT metadata, owner FROM files WHERE id=?", (file_id,)) as cur:
             row = await cur.fetchone()
     if not row:
