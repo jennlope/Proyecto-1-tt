@@ -18,7 +18,7 @@
   <h1>{{ meta.filename }}</h1>
   <p>Tamaño total: <b>{{ meta.size }}</b> bytes</p>
   <p>
-    <a class="btn" href="/file/{{ meta.id }}/download">⬇️ Descargar reconstruido</a>
+    <a class="btn" href="/file/{{ file_id }}/download">⬇️ Descargar reconstruido</a>
   </p>
 
   <h2>Bloques</h2>
@@ -29,7 +29,7 @@
         <td>{{ loop.index0 }}</td>
         <td><code>{{ b.block_id }}</code></td>
         <td>{{ b.datanode }}</td>
-        <td><a class="btn" href="/block/{{ meta.id }}/{{ loop.index0 }}">⬇️ Bloque {{ loop.index0 }}</a></td>
+        <td><a class="btn" href="/block/{{ file_id }}/{{ loop.index0 }}">⬇️ Bloque {{ loop.index0 }}</a></td>
       </tr>
     {% endfor %}
   </table>

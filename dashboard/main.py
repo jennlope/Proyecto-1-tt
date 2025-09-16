@@ -95,6 +95,7 @@ def file_detail(request: Request, file_id: int):
         "blocks": blocks,
         "nodes": nodes,
         "user": USER,
+        "file_id": file_id
     })
 
 @app.get("/block/{file_id}/{index}")
@@ -112,13 +113,13 @@ def download_block(file_id: int, index: int):
     dn = b.get("datanode")
     if not block_id or not dn:
         raise HTTPException(500, "invalid meta for block")
-    url = f"{dn}/read/{block_id}"
+    dn_url = dn.replace("http://localhost:", "http://host.docker.internal:")
+
     filename = meta.get("filename")
     stem, ext = os.path.splitext(filename)
     download_name = f"{stem}.block{index}{ext or ''}"
 
     def stream():
-        datanode_url = dn.replace("http://localhost:", "http://host.docker.internal:")
         with requests.get(f"{dn_url}/read/{block_id}", stream=True, timeout=10) as r:
             r.raise_for_status()
             for chunk in r.iter_content(64 * 1024):
@@ -137,7 +138,7 @@ def download_reconstructed(file_id: int, best_effort: int = Query(0)):
     """
     meta = get_meta(file_id)
     filename = meta.get("filename")
-    
+
     blocks = meta.get("blocks", [])
     if not blocks:
         raise HTTPException(404, "no blocks")
