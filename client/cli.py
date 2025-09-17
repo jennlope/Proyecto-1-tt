@@ -1,4 +1,4 @@
-import argparse, os, requests
+import argparse, os, requests, time
 from requests.auth import HTTPBasicAuth
 import hashlib
 
@@ -72,19 +72,78 @@ def cmd_get(args):
     meta = requests.get(f"{nn(args)}/meta/{args.file_id}", auth=auth(args)).json()
     out = args.output or meta.get("name", f"file_{args.file_id}")
 
-    # 2) Reconstruir archivo
+    # 2) Reconstruir archivo con tolerancia a fallos
+    failed_blocks = []
+    down_datanodes = []
+    
     with open(out, "wb") as w:
         for blk in meta["blocks"]:
             dn = blk["datanode"].rstrip("/")
             url = f"{dn}/read/{blk['block_id']}"
-            with requests.get(url, stream=True) as r:
-                if r.status_code != 200:
-                    raise SystemExit(f"Bloque faltante: {blk['block_id']} en {dn}")
-                for chunk in r.iter_content(1024*1024):
-                    w.write(chunk)
+            
+            try:
+                with requests.get(url, stream=True, timeout=10) as r:
+                    if r.status_code != 200:
+                        print(f"[ERROR] Bloque no encontrado: {blk['block_id']} en {dn}")
+                        failed_blocks.append(blk['block_id'])
+                        if dn not in down_datanodes:
+                            down_datanodes.append(dn)
+                        continue
+                    
+                    for chunk in r.iter_content(1024*1024):
+                        w.write(chunk)
+                    print(f"[OK] Bloque descargado: {blk['block_id']} desde {dn}")
+                        
+            except requests.exceptions.ConnectionError as e:
+                print(f"[ERROR] DataNode caído: {dn} - No se puede descargar {blk['block_id']}")
+                failed_blocks.append(blk['block_id'])
+                if dn not in down_datanodes:
+                    down_datanodes.append(dn)
+                continue
+            except requests.exceptions.Timeout:
+                print(f"[ERROR] Timeout en DataNode: {dn} - {blk['block_id']}")
+                failed_blocks.append(blk['block_id'])
+                if dn not in down_datanodes:
+                    down_datanodes.append(dn)
+                continue
+            except Exception as e:
+                print(f"[ERROR] Error inesperado con {dn}: {str(e)}")
+                failed_blocks.append(blk['block_id'])
+                if dn not in down_datanodes:
+                    down_datanodes.append(dn)
+                continue
+
+    # 3) Enviar alerta si hay bloques faltantes
+    if failed_blocks:
+        alert_data = {
+            "user": args.user,
+            "filename": meta.get("filename", f"file_{args.file_id}"),
+            "down_nodes": down_datanodes,
+            "missing_blocks": failed_blocks,
+            "reason": "download_failed_due_to_down_nodes",
+            "ts": int(time.time())
+        }
+        
+        try:
+            alert_response = requests.post(f"{nn(args)}/alerts", json=alert_data, timeout=5)
+            if alert_response.status_code == 200:
+                print(f"[ALERT] Alerta enviada al NameNode: {len(failed_blocks)} bloques faltantes")
+            else:
+                print(f"[WARNING] No se pudo enviar alerta: {alert_response.status_code}")
+        except Exception as e:
+            print(f"[WARNING] Error enviando alerta: {str(e)}")
+        
+        print(f"\n[RESULTADO] Descarga parcialmente fallida:")
+        print(f"  - Bloques faltantes: {len(failed_blocks)}")
+        print(f"  - DataNodes caídos: {down_datanodes}")
+        print(f"  - Archivo puede estar incompleto: {out}")
+        
+        # No salir con error, solo advertir
+        return
+    
     print(f"recuperado -> {out}")
 
-    # 3) Calcular hash local y compararlo
+    # 4) Calcular hash local y compararlo (solo si descarga completa)
     local_hash = file_hash(out)
     remote_hash = meta.get("hash")
 

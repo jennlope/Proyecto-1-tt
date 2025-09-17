@@ -81,7 +81,7 @@ ALERTS: List[AlertReq] = []
 def post_alert(alert: AlertReq):
     """
     Registra una alerta cuando falla la reconstrucción (nodos caídos o bloques ausentes).
-    No requiere auth para simplificar la demo; añade Depends(auth) si quieres protegerlo.
+    No requiere auth para simplificar la demo.
     """
     ALERTS.append(alert)
     print(f"[ALERT] {alert.ts} {alert.user}:{alert.filename} "
