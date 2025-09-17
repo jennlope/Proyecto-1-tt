@@ -76,42 +76,33 @@ flowchart TD
 
 ---
 
-## 🚀 Instalación y configuración
+## 🚀 Instalación y Ejecución
 
-### Requisitos previos
-
-- **Docker** y **Docker Compose**
-- **Python 3.11+**
-- **Sistema operativo**: Linux (Ubuntu, Debian, etc.)
-
-### 1. Preparar el proyecto
-
-```bash
-cd ~/telematica/Proyecto-1-tt
-
-# Crear entorno virtual (opcional, para desarrollo local)
+### 1. Crear una carpeta denominada proyecto1 en Linux.
+### 2. Clonar el repositorio en dicha carpeta.
+### 3. Necesita tener instalado Python 3 y el paquete venv:
+```powershell
+sudo apt update
+sudo apt install python3 python3-venv python3-pip -y
+```
+### 4. Crear un entorno virtual:
+```powershell
 python3 -m venv venv
+```
+### 5. Activar el entorno virtual:
+```powershell
 source venv/bin/activate
-
-# Instalar dependencias para el cliente
-pip install requests
 ```
-
-### 2. Ejecutar con Docker Compose
-
-```bash
-# Construir y levantar todos los servicios
-docker compose up --build -d
-
-# Verificar que todos los contenedores están corriendo
-docker compose ps
-
-# Ver logs si hay problemas
-docker compose logs namenode
-docker compose logs datanode1
+### 6. Instalar dependencias:
+```powershell
+pip install -r requirements.txt
 ```
-
-**Servicios levantados:**
+### 7. Necesita tener instalado Docker y Docker Compose.
+### 8. Ejecutar Docker Compose:
+```powershell
+sudo docker compose up --build
+```
+**Servicios en ejecución:**
 - NameNode (puerto 8000)
 - DataNode1 (puerto 8001) 
 - DataNode2 (puerto 8002)
